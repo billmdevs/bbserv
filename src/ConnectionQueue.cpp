@@ -3,33 +3,8 @@
 #include "ConnectionQueue.h"
 #include "AutoLock.h"
 
-//void queue_add(queue q, void *value)
-//{
-    //pthread_mutex_lock(&q->mtx);
 
-    //[> Add element normally. <]
-
-    //pthread_mutex_unlock(&q->mtx);
-
-    //[> Signal waiting threads. <]
-    //pthread_cond_signal(&q->cond);
-//}
-
-//void queue_get(queue q, void **val_r)
-//{
-    //pthread_mutex_lock(&q->mtx);
-
-    //[> Wait for element to become available. <]
-    //while (empty(q))
-        //rc = pthread_cond_wait(&q->cond, &q->mtx);
-
-    //[> We have an element. Pop it normally and return it in val_r. <]
-
-    //pthread_mutex_unlock(&q->mtx);
-//}
-
-
-void ConnectionQueue::add(int clientSocket)
+void ConnectionQueue::add(int clientSocket) noexcept
 {
     AutoLock guard(&queueMutex);
 
@@ -39,7 +14,17 @@ void ConnectionQueue::add(int clientSocket)
     pthread_cond_signal(&queueCondition);
 }
 
-int ConnectionQueue::get()
+void ConnectionQueue::add(BroadcastCommand& broadcast) noexcept
+{
+    AutoLock guard(&queueMutex);
+
+    this->connectionQueue.emplace(broadcast);
+
+    guard.unlock();
+    pthread_cond_signal(&queueCondition);
+}
+
+ConnectionQueue::Entry_t ConnectionQueue::get() noexcept
 {
     AutoLock guard(&queueMutex);
 
@@ -48,7 +33,8 @@ int ConnectionQueue::get()
         pthread_cond_wait(&queueCondition, &queueMutex);
     }
 
-    int clientSocket { this->connectionQueue.front() };
+    auto entry { this->connectionQueue.front() };
     this->connectionQueue.pop();
-    return clientSocket;
+    return entry;
 }
+
