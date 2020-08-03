@@ -8,7 +8,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <vector>
 #include "BBServException.h"
+#include "BBServTimeout.h"
 
 #ifdef SYS_gettid
 pid_t gettid();
@@ -16,6 +18,22 @@ pid_t gettid();
 #error "SYS_gettid unavailable on this system"
 #endif
 
+/**
+ *Contains a peer's host-name and the port number.
+ */
+struct Peer
+{
+    std::string host;
+    unsigned int port {0u};
+
+    std::string represent() { return host + ":" + std::to_string(port); }
+};
+
+std::ostream& operator<<(std::ostream& os, Peer& peer);
+
+/**
+ *The singleton class providing configuration data for the other parts of the program.
+ */
 class Config
 {
     protected:
@@ -25,6 +43,7 @@ class Config
         int sport { 10000 };
         bool isDaemon { true };
         bool isDebug { false };
+        std::vector<Peer> peers;
 
     public:
         static Config& singleton()
@@ -37,27 +56,31 @@ class Config
         /**
          *Returns the path to the bulletin board file.
          */
-        const std::string& get_bbfile()   { return bbfile; }
+        const std::string& get_bbfile()         const { return bbfile; }
         /**
          *Returns the number of used threads.
          */
-        size_t get_Tmax()                 { return Tmax; }
+        size_t get_Tmax()                       const { return Tmax; }
         /**
          *Returns the port number of client-server communication.
          */
-        int get_bport()                   { return bport;}
+        int get_bport()                         const { return bport;}
         /**
          *Returns the port number used for inter-server communication.
          */
-        int get_sport()                   { return sport;}
+        int get_sport()                         const { return sport;}
         /**
          *Returns if the bbserv shall act as a daemon.
          */
-        bool is_daemon()                  { return isDaemon; }
+        bool is_daemon()                        const { return isDaemon; }
         /**
          *Returns if the debug messages shall be displayed.
          */
-        bool is_debug()                   { return isDebug; }
+        bool is_debug()                         const { return isDebug; }
+        /**
+         *Returns a reference to the registered peers.
+         */
+        const std::vector<Peer>& get_peers()    const { return peers; }
 
         /**
          *Set the path to the bulletin board file.
@@ -83,6 +106,16 @@ class Config
          *Set of debug messages shall be displayed.
          */
         void set_debug(bool on)                     { this->isDebug = on; }
+        /**
+         * Set a new peer definition including host-name and port number.
+         *
+         * Upon parsing error, this method may throw a BBServException.
+         */
+        void add_peer(std::string& peer);
+        /**
+         *Get the default timeout in ms for non-blocking network operations.
+         */
+        int get_network_timeout_ms()                { return 5000; }
 };
 
 /**
@@ -91,13 +124,22 @@ class Config
 template<typename OriginT, typename... ArgsT>
 void error_return(OriginT origin, ArgsT... args)
 {
-    if (Config::singleton().is_debug())
-    {
-        std::stringstream sout;
-        sout << "ERROR - [" << gettid() << "] " << typeid(origin).name() << ": ";
-        (sout << ... << args) << ' ' << std::endl;
-        throw BBServException(sout.str());
-    }
+    std::stringstream sout;
+    sout << "ERROR - [" << gettid() << "] " << typeid(origin).name() << ": ";
+    (sout << ... << args) << ' ' << std::endl;
+    throw BBServException(sout.str());
+}
+
+/**
+ *Print timeout messages.
+ */
+template<typename OriginT, typename... ArgsT>
+void timeout_return(OriginT origin, ArgsT... args)
+{
+    std::stringstream sout;
+    sout << "ERROR - [" << gettid() << "] " << typeid(origin).name() << ": ";
+    (sout << ... << args) << ' ' << std::endl;
+    throw BBServTimeout(sout.str());
 }
 
 /**
