@@ -1,0 +1,159 @@
+================
+
+Overview
+--------
+
+The data replication takes place between multiple instances of bbserv. Each
+instance is introduced to all others by means of the 'peers' parameter. The data
+replication is triggered by a WRITE or REPLACE operation of any of the bbserv
+instances and aims to synchronize the content of all their database files.
+
+Design
+------
+
+Command Objects
+~~~~~~~~~~~~~~~
+
+bbserv is designed to handle arbitrary commands sent to both the 'bport' and the
+'sport'. Upon receiving, the Command Identifier, which is the first word in the
+text message, is used to deduce the command and passed on to a builder function,
+which instantiates a Command Object according to the Command Identifier. The
+builder function is aware of all the supported Command Identifiers and when
+creating the appropriate Command Objects, it forwards all needed information
+like the whole message text, the socket stream to send its reply and the
+reference to the current user name.
+
+Command Objects are designed in a polymorphic way so they can be operated in any
+free worker thread. They support a common interface and encapsulate all data
+needed to complete the necessary tasks.
+
+Thread Pool
+~~~~~~~~~~~
+
+The Thread Pool is created upon bbserv's startup. It is passed on the number of
+worker threads as defined in the configuration (i.e. command line, configuration
+file) and a reference to the Connection Queue.
+
+This way the network connection to the clients or sibling bbserv instances is
+completely transparent to the Thread Pool. Only the information about the socket
+is transported and the broadcast commands.
+
+Connection Queue
+~~~~~~~~~~~~~~~~
+
+The Connection Queue is the link between the Input Connection and the Thread
+Pool. It is implemented in a thread-safe manner, so it can be safely used from
+all the agents (i.e. worker threads).
+
+The Connection Queue is designed in a polymorphic manner, so it can relay local
+sockets for incoming client connections. But it can also contain broadcast
+commands, which are to be sent to peers for data replication.
+
+Input Connection
+~~~~~~~~~~~~~~~~
+
+Instances of the Input Connection are created in order to listen on both ports
+('bport' and 'sport'). Each instance creates a socket for incoming requests and
+listens on them. This can be done in blocking or non-blocking mode. Upon the
+arrival of a new network connection a corresponding socket is created and put
+into the Connection Queue. The Thread Pool is signaled as well and so a free
+agent can handle this client's commands.
+
+Each Input Connection instance is run in its own thread context, which is not
+part of the Thread Pool. Hence the main-thread is kept free for user input on
+its local console as long as it is not run as a daemon.
+
+Command Objects for data replication
+------------------------------------
+
+PRECOMMIT
+~~~~~~~~~
+
+Receiver:: Participant
+
+Trigger:: The Coordinator is processing an WRITE or REPLACE command.
+
+Reply:: ACK command including a success indicator.
+
+Payload:: The server-generated identifier of the WRITE/REPLACE command, which
+is to be done.
+
+COMMIT
+~~~~~~
+
+Receiver:: Participant
+
+Trigger:: All Participants have positively acknowledged PRECOMMIT.
+
+Payload:: A copy of the WRITE or REPLACE command prefixed by the user name of
+the original command and the server-generated identifier of the WRITE/REPLACE
+command, which is to be done.
+
+Reply:: SUCCESSFULL or UNSUCCESSFULL command let the Coordinator know the
+result of requested operation.
+
+ACK
+~~~
+
+Receiver:: Coordinator
+
+Trigger:: Peer is up an running.
+
+Payload:: This command carries the message identifier, which has been passed
+through the PRECOMMIT command and "0" or "1" to indicate failure or success.
+
+SUCCESSFULL
+~~~~~~~~~~~
+
+Receiver:: Coordinator, Participant
+
+Trigger::
+ * Participant has processed the WRITE or REPLACE command successfully.
+ * Coordinator has received SUCCESSFULL commands from all Participants.
+
+Payload:: The server-generated identifier of the WRITE/REPLACE command, which
+had to be done.
+
+UNSUCCESSFULL
+~~~~~~~~~~~~~
+
+Receiver:: Coordinator, Participant
+
+Trigger::
+ * Participant failed to process the WRITE or REPLACE command.
+ * Coordinator has received one or more UNSUCCESSFULL commands from
+   Participants or awaiting a Participant's reply timed out.
+
+Payload:: The server-generated identifier of the WRITE/REPLACE command, which
+had to be done.
+
+ABORT
+~~~~~
+
+Receiver:: Participant
+
+Trigger:: Coordinator has received one or more negative acknowledgments to
+PRECOMMIT or awaiting it timed out.
+
+Multicasting
+~~~~~~~~~~~~
+
+All of these commands need to be broadcasted from the Coordinator to all the
+Participants. The initiating Command Object (e.g. the WRITE command initiates
+PRECOMMIT to be broadcasted) will enqueue the broadcast command (e.g. PRECOMMIT)
+together with all the peers in the Connection Queue.  Hence sending the
+broadcast-command (e.g. PRECOMMIT) is dispatched to Thread Pool again and
+processed in parallel.
+
+In addition, the initiating Command Object provides an instance of Acknowledge
+Queue, which is used to collect all the replies from the peers. The initiating
+Command Object uses it to determine if it can process further or needs to
+abort/undo the current command.
+
+Data consistency
+~~~~~~~~~~~~~~~~
+
+In order to check for data consistency during all the stages in the two-phase
+commit protocol, the message identifier is passed along with the PRECOMMIT and
+COMMIT commands. This way we can detect intercepting WRITE operations, which
+have a different origin than the currently ongoing data replication.
