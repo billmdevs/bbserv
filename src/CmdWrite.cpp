@@ -42,41 +42,6 @@ size_t CmdWrite::update_message_number()
     return number;
 }
 
-void CmdWrite::broadcast_synchronous(std::string commandId, std::string userName, size_t messageId, std::string arguments)
-{
-    BroadcastCommand broadcast;
-
-    for (auto& peer : Config::singleton().get_peers())
-    {
-        debug_print(this, "Add ", commandId, "/peer to connectionQueue: ", peer);
-        broadcast.peer = peer;
-        broadcast.command = "BROADCAST-";
-        broadcast.command += commandId;
-        broadcast.command += " " + userName;
-        broadcast.command += " " + std::to_string(messageId);
-        broadcast.command += " " + arguments;
-        this->connectionQueue->add(broadcast);
-    }
-
-    // Wait for acknowledges from all peers
-    if (!AcknowledgeQueue::TheOne(messageId)->check_success(Config::singleton().get_peers().size()))
-    {
-        error_return(this, "Did not get positive acknowledge from all peers");
-    }
-    debug_print(this, "All peers acknowledged");
-    // Delete this AcknowledgeQueue
-    AcknowledgeQueue::TheOne(messageId, true);
-}
-
-bool CmdWrite::replicate_command(std::string userName, size_t messageId)
-{
-    broadcast_synchronous("PRECOMMIT", userName, messageId, "");
-    broadcast_synchronous("COMMIT", userName, messageId, commandId + " LOCAL" +
-            (this->line + commandId.size()));
-
-    return true;
-}
-
 void CmdWrite::execute()
 {
     auto &in =  std::ios_base::in;
@@ -93,16 +58,7 @@ void CmdWrite::execute()
 
     std::string message { this->line + std::strlen(COMMAND_ID) + 1 };
 
-    // Ignore some leading spaces
-    auto localWriteOnly { 3 > message.find("LOCAL ") };
-    if (localWriteOnly)
-    {
-        // Eliminate the prefix
-        auto diff { std::strlen("LOCAL ") };
-        message.replace(message.begin(), message.end() - diff, message.begin()
-                + diff, message.end());
-        message.replace(message.end() - diff, message.end(), diff, '\0');
-    }
+    auto localWriteOnly { prepareLocalOperation(message) };
 
     try
     {
@@ -129,7 +85,7 @@ void CmdWrite::execute()
         if (this->connectionQueue && !localWriteOnly)
         {
             // Have all the peers process this command as well
-            if (!replicate_command(this->user, id))
+            if (!replicate_command(this, this->user, id))
             {
                 // TODO undo
             }

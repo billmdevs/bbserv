@@ -34,5 +34,8 @@ class CmdCommit
          */
         void execute();
 
+    private:
+        void send_reply_text(std::string& text);
+
 };
 

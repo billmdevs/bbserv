@@ -10,6 +10,22 @@
 #include <sys/socket.h>
 #include "CmdBuilder.h"
 
+void CmdCommit::send_reply_text(std::string& text)
+{
+        auto sent { send(fileno(this->stream), text.data(), text.size(), 0) };
+        if (-1 == sent)
+        {
+            error_return(this, "Failed to send success reply on ", fileno(this->stream));
+        }
+        else if (text.size() > static_cast<size_t>(sent))
+        {
+            error_return(this, "Failed to send all bytes of the success reply ", sent, " on ", fileno(this->stream));
+        }
+
+        //fprintf(this->stream, "SUCCESSFUL %d\n", messageId);
+        //fflush(this->stream);
+}
+
 void CmdCommit::execute()
 {
     if (this->commandId != COMMAND_ID)
@@ -67,25 +83,14 @@ void CmdCommit::execute()
         }
 
         std::string text = std::string("SUCCESSFUL ") + std::to_string(messageId);
-        auto sent { send(fileno(this->stream), text.data(), text.size(), 0) };
-        if (-1 == sent)
-        {
-            error_return(this, "Failed to send success reply on ", fileno(this->stream));
-        }
-        else if (12 > sent)
-        {
-            error_return(this, "Failed to send all bytes of the success reply ", sent, " on ", fileno(this->stream));
-        }
-
-        //fprintf(this->stream, "SUCCESSFUL %d\n", messageId);
-        //fflush(this->stream);
+        send_reply_text(text);
         debug_print(this, "Reply SUCCESSFUL via ", fileno(this->stream));
     }
     catch (const BBServException& error)
     {
         std::cout << error.what() << std::endl;
-        fprintf(this->stream, "UNSUCCESSFUL %d\n", messageId);
-        fflush(this->stream);
+        std::string text = std::string("UNSUCCESSFUL ") + std::to_string(messageId);
+        send_reply_text(text);
     }
 
 }

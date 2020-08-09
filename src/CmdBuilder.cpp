@@ -51,7 +51,7 @@ std::optional<ThreadPool::Commands_t> build_command(const std::string commandId,
     }
     else if (commandId == "REPLACE")
     {
-        return CmdReplace(commandId, resources.get_stream(), line, resources.get_user());
+        return CmdReplace(commandId, resources.get_stream(), line, resources.get_user(), qu);
     }
     else if (commandId == "QUIT")
     {
