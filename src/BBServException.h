@@ -20,6 +20,9 @@ class BBServException : public std::exception
         {
         }
 
+        /**
+         *Return a descriptive text explaining the exceptional situation.
+         */
         virtual const char* what() const noexcept
         {
             return this->errorText.data();
