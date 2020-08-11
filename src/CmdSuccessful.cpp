@@ -11,7 +11,6 @@ void CmdSuccessful::execute()
     }
 
     debug_print(this, "Processing ", COMMAND_ID, " command");
-    //debug_print(this, "Line: ", this->line);
 
     auto messageId {0};
     std::string localCommandId;
