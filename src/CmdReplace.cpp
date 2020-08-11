@@ -2,6 +2,7 @@
 
 #include "CmdReplace.h"
 #include "CmdWrite.h"
+#include "RWLock.h"
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -41,6 +42,9 @@ bool replace_record(std::istream& input, std::ostream& output, size_t id, std::s
 
 void CmdReplace::rewrite_bbfile(size_t id, std::string_view message)
 {
+    debug_print(this, "Begin replace operation...");
+    RWAutoLock<WriteLock> guard (&globalRWLock);
+
     // Backup the original bbfile
     auto origName { Config::singleton().get_bbfile() };
     auto backupName { origName + "~"};
@@ -50,6 +54,7 @@ void CmdReplace::rewrite_bbfile(size_t id, std::string_view message)
     std::ifstream input(backupName);
     std::ofstream output(origName, std::ios_base::out|std::ios_base::trunc);
     auto success { replace_record(input, output, id, message, this->user) };
+    debug_print(this, " ...done");
 
     // Throw if the file is absent or the copy operation failed
     if (output.fail())
@@ -91,7 +96,7 @@ void CmdReplace::execute()
     sout >> dummy;      // command REPLACE
     if (localReplaceOnly)
     {
-        sout >> dummy; // modifier LOCAL
+        sout >> dummy;  // modifier LOCAL
     }
     sout >> id;         // message ID
     sout >> seperator;  // seperator /
