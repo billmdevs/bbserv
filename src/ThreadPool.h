@@ -18,6 +18,7 @@
 #include "CmdCommit.h"
 #include "CmdAcknowledge.h"
 #include "CmdSuccessful.h"
+#include "CmdUnsuccessful.h"
 #include "BroadcastPrecommit.h"
 #include "BroadcastCommit.h"
 
@@ -28,7 +29,7 @@ class ThreadPool
 {
     public:
         using Commands_t = std::variant<CmdUser, CmdWrite, CmdRead, CmdReplace, CmdQuit,
-              CmdPrecommit, CmdCommit, CmdAcknowledge, CmdSuccessful,
+              CmdPrecommit, CmdCommit, CmdAcknowledge, CmdSuccessful, CmdUnsuccessful,
               BroadcastPrecommit, BroadcastCommit>;
 
     protected:

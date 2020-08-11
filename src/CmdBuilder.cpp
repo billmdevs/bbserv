@@ -73,6 +73,10 @@ std::optional<ThreadPool::Commands_t> build_command(const std::string commandId,
     {
         return CmdSuccessful(commandId, resources.get_stream(), line);
     }
+    else if (commandId == "UNSUCCESSFUL")
+    {
+        return CmdUnsuccessful(commandId, resources.get_stream(), line);
+    }
     else if (commandId == "BROADCAST-PRECOMMIT")
     {
         return BroadcastPrecommit("PRECOMMIT", resources.get_stream(), line);
