@@ -17,12 +17,12 @@ size_t CmdWrite::update_message_number()
     auto &trunc =  std::ios_base::trunc;
 
     std::string noFile { Config::singleton().get_bbfile() + ".no" };
-    std::fstream io(noFile.data());
+    std::fstream io(noFile);
     size_t number;
 
     if (io.fail())
     {
-        io.open(noFile.data(), in|out|trunc);
+        io.open(noFile, in|out|trunc);
         io << 0;
         io.flush();
         io.seekg(0);
@@ -35,8 +35,9 @@ size_t CmdWrite::update_message_number()
 
     if (io.fail())
     {
-        error_return(this, "Failed to read/write message number (", noFile, "), state=",
-                name_statebits(io.rdstate()));
+        error_return(this, "Failed to read/write message number (", noFile,
+                "), state=", name_statebits(io.rdstate()));
+
     }
 
     debug_print(this, "Current message number: ", number);
