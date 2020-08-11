@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <string_view>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
@@ -13,7 +14,7 @@
 #include "BBServTimeout.h"
 
 #ifdef SYS_gettid
-pid_t gettid();
+pid_t gettid() noexcept;
 #else
 #error "SYS_gettid unavailable on this system"
 #endif
@@ -37,7 +38,8 @@ std::ostream& operator<<(std::ostream& os, Peer& peer);
 class Config
 {
     protected:
-        std::string bbfile { "bbfile.txt" };
+        std::string bbfile { "" };
+        std::string bbconf { "bbserv.conf" };
         size_t Tmax { 20 };
         int bport { 9000 };
         int sport { 10000 };
@@ -57,7 +59,7 @@ class Config
         /**
          *Returns the path to the bulletin board file.
          */
-        const std::string& get_bbfile()         const { return bbfile; }
+        const std::string get_bbfile()          const { return bbfile; }
         /**
          *Returns the number of used threads.
          */
@@ -90,7 +92,7 @@ class Config
         /**
          *Set the path to the bulletin board file.
          */
-        void set_bbfile(const std::string& bbfile)  { this->bbfile = bbfile; }
+        void set_bbfile(const std::string bbfile)  { this->bbfile = bbfile; }
         /**
          *Set the number of used threads.
          */
@@ -125,6 +127,20 @@ class Config
          *Get the default timeout in ms for non-blocking network operations.
          */
         int get_network_timeout_ms()                { return 5000; }
+        /**
+         *Read the contents of the config file.
+         */
+        void read_config();
+        /**
+         *Set the configuration file.
+         */
+        void set_bbconf(const std::string_view conf) { this->bbconf = conf; }
+
+    private:
+        void read_config_line(std::string line);
+        size_t read_config_uint(std::string& value);
+        bool read_config_bool(std::string& value);
+        void read_config_peers(std::string& line);
 };
 
 /**
