@@ -43,6 +43,7 @@ class Config
         int sport { 10000 };
         bool isDaemon { true };
         bool isDebug { false };
+        bool isQuick { false };
         std::vector<Peer> peers;
 
     public:
@@ -78,6 +79,10 @@ class Config
          */
         bool is_debug()                         const { return isDebug; }
         /**
+         *Returns if the prolonged I/O operations for debugging is disabled.
+         */
+        bool is_quick()                         const { return isQuick; }
+        /**
          *Returns a reference to the registered peers.
          */
         const std::vector<Peer>& get_peers()    const { return peers; }
@@ -106,6 +111,10 @@ class Config
          *Set of debug messages shall be displayed.
          */
         void set_debug(bool on)                     { this->isDebug = on; }
+        /**
+         *Set of debug messages shall be displayed.
+         */
+        void set_quick(bool on)                     { this->isQuick = on; }
         /**
          * Set a new peer definition including host-name and port number.
          *
