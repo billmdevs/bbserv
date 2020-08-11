@@ -38,13 +38,14 @@ void print_usage() {
     std::cout << "  -s overrides the port number sp according to its argument." << std::endl;
     std::cout << "  -f (with no argument) forces daemon behavior to false." << std::endl;
     std::cout << "  -d (with no argument) forces debugging facilities to true." << std::endl;
+    std::cout << "  -q (with no argument) disables debug-prolonged I/O." << std::endl;
 }
 
 /**
  *The program's main entry point.
  */
 int main(int argc, char *argv[]) {
-    const char* optionString { "hb:T:p:s:fd" };
+    const char* optionString { "hb:T:p:s:fdq" };
     char option { '\0' };
 
     while (-1 != (option = getopt(argc, argv, optionString))) {
@@ -70,6 +71,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'd':
                 Config::singleton().set_debug(true);
+                break;
+            case 'q':
+                Config::singleton().set_quick(true);
                 break;
             default:
                 break;
