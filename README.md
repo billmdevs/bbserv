@@ -28,7 +28,7 @@ Arguments:
 
 
 Implementation and Dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 This project is written in C++17 and provides a build script based non GNU Make.
 
