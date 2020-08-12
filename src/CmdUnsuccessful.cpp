@@ -1,6 +1,8 @@
 //Filename:  CmdUnsuccessful.cpp
 
 #include "CmdUnsuccessful.h"
+#include "UndoStore.h"
+#include <variant>
 
 void CmdUnsuccessful::execute()
 {
@@ -28,6 +30,17 @@ void CmdUnsuccessful::execute()
         {
             error_return(this, "Invalid command reply; state=",
                     name_statebits(sin.rdstate()));
+        }
+
+        debug_print(this, "Undo the last operation");
+        try
+        {
+            std::visit([](auto&& cmd) { cmd.undo(); },
+                    UndoStore::singleton().get());
+        }
+        catch (const BBServException& error)
+        {
+            std::cout << error.what() << std::endl;
         }
     }
     catch (const BBServException& error)

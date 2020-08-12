@@ -40,6 +40,11 @@ class CmdReplace
         void execute();
 
         /**
+         *Revert this replace operation.
+         */
+        void undo();
+
+        /**
          *Get the command identifier.
          */
         std::string_view get_command_id() { return this->commandId; }

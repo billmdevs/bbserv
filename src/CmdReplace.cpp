@@ -3,6 +3,7 @@
 #include "CmdReplace.h"
 #include "CmdWrite.h"
 #include "RWLock.h"
+#include "UndoStore.h"
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -54,6 +55,8 @@ void CmdReplace::rewrite_bbfile(size_t id, std::string_view message)
     std::ifstream input(backupName);
     std::ofstream output(origName, std::ios_base::out|std::ios_base::trunc);
     auto success { replace_record(input, output, id, message, this->user) };
+
+    guard.unlock();
     debug_print(this, " ...done");
 
     // Throw if the file is absent or the copy operation failed
@@ -69,6 +72,8 @@ void CmdReplace::rewrite_bbfile(size_t id, std::string_view message)
     }
     else
     {
+        broadcast_asynchronous(this, "UNSUCCESSFUL", "", id, "");
+
         fprintf(this->stream, "3.1 UNKNOWN %ld\n", id);
     }
 }
@@ -121,11 +126,41 @@ void CmdReplace::execute()
 
         rewrite_bbfile(id, message.data());
 
+        if (localReplaceOnly)
+        {
+            UndoStore::singleton().set(*this);
+        }
+        else
+        {
+            UndoStore::singleton().clear();
+        }
+
     }
     catch (const BBServException& error)
     {
+        broadcast_asynchronous(this, "UNSUCCESSFUL", "", id, "");
+
+        debug_print(this, error.what());
         fprintf(this->stream, "3.2 ERROR WRITE %s\n", error.what());
     }
 
     fflush(this->stream);
 }
+
+void CmdReplace::undo()
+{
+    try
+    {
+        debug_print(this, "Begin undo operation...");
+        RWAutoLock<WriteLock> guard (&globalRWLock);
+
+        restore_backup(this);
+        debug_print(this, "...undone");
+        UndoStore::singleton().clear();
+    }
+    catch (const BBServException& error)
+    {
+        std::cout << error.what() << std::endl;
+    }
+}
+

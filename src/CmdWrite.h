@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <ios>
 #include <string>
 #include "SessionResources.h"
 #include "Config.h"
@@ -19,6 +20,7 @@ class CmdWrite
         const char* line {nullptr};
         std::string user;
         ConnectionQueue* connectionQueue {nullptr};
+        std::ios::pos_type lastLinePos {-1};
 
     public:
         /**
@@ -37,6 +39,11 @@ class CmdWrite
          *Process the given command.
          */
         void execute();
+
+        /**
+         *Revert this write operation.
+         */
+        void undo();
 
         /**
          *Get the command identifier.
@@ -59,6 +66,11 @@ class CmdWrite
          */
         size_t update_message_number();
 
+        /**
+         *Open the bbfile and create it if needed.
+         */
+        void open_db(std::fstream& fout);
+
 };
 
 /**
@@ -77,6 +89,27 @@ inline bool prepareLocalOperation(std::string& message)
         message.replace(message.end() - diff, message.end(), diff, '\0');
     }
     return localWriteOnly;
+}
+
+/**
+ *Broadcast one command return immediately.
+ */
+template<class T>
+inline void broadcast_asynchronous(T* cmd, std::string commandId, std::string userName, size_t messageId, std::string arguments)
+{
+    BroadcastCommand broadcast;
+
+    for (auto& peer : Config::singleton().get_peers())
+    {
+        debug_print(cmd, "Add ", commandId, "/peer to connectionQueue: ", peer);
+        broadcast.peer = peer;
+        broadcast.command = "BROADCAST-";
+        broadcast.command += commandId;
+        broadcast.command += " " + userName;
+        broadcast.command += " " + std::to_string(messageId);
+        broadcast.command += " " + arguments;
+        cmd->get_connection_queue()->add(broadcast);
+    }
 }
 
 /**
@@ -110,7 +143,7 @@ inline void broadcast_synchronous(T* cmd, std::string commandId, std::string use
 }
 
 /**
- *Broadcast this REPLACE command to known peers.
+ *Broadcast this WRITE/REPLACE command to known peers.
  */
 template<class T>
 inline bool replicate_command(T* cmd, std::string userName, size_t messageId)
@@ -121,5 +154,29 @@ inline bool replicate_command(T* cmd, std::string userName, size_t messageId)
             (cmd->get_line().data() + cmd->get_command_id().size()));
 
     return true;
+}
+
+
+/**
+ * Restore the backup.
+ *
+ * This function may throw BBServException in case file operations fail.
+ */
+template<class T>
+inline void restore_backup(T* cmd)
+{
+    auto origName { Config::singleton().get_bbfile() };
+    auto backupName { origName + "~"};
+
+    if (0 != std::remove(origName.data()))
+    {
+        error_return(cmd, "Failed to revoke most recent replace: ",
+                strerror(errno));
+    }
+    if (0 != std::rename(backupName.data(), origName.data()))
+    {
+        error_return(cmd, "Failed to restore backup data: ",
+                strerror(errno));
+    }
 }
 
