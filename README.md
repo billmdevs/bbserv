@@ -1,7 +1,7 @@
 # BBServ
 
-##Bulletin Board Messages and Distributed Agreement:
-##A CSC 590 Challenge
+## Bulletin Board Messages and Distributed Agreement:
+## A CSC 590 Challenge
 
 Bill Morrisson
 bill.morrison@somedomain.com
@@ -9,7 +9,7 @@ bill.morrison@somedomain.com
 Bulletin Board Server
 ---------------------
 
-Usage
+### Usage
 ~~~~~
 
 Usage: bbserv [arguments] [peer..]
@@ -26,9 +26,10 @@ Arguments:
   -d (with no argument) forces debugging facilities to true.
   -q (with no argument) disables debug-prolonged I/O.
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Implementation and Dependencies
-~~~~~~~~~~~~~~~~
+### Implementation and Dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This project is written in C++17 and provides a build script based non GNU Make.
 
@@ -36,7 +37,7 @@ It relies only on standard POSIX libraries and is developed and tested on
 GNU/Linux with GCC9. So it might be working on other POSIX compliant platforms
 as well.
 
-Design Principles
+### Design Principles
 ~~~~~~~~~~~~~~~~~
 
 The following design principles have been applied in the design of this project:
