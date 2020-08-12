@@ -1,22 +1,32 @@
 #include <iomanip>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <unistd.h>
 #include <pthread.h>
 #include <string>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <signal.h>
 #include "Config.h"
 #include "InConnection.h"
 #include "ThreadPool.h"
 #include "ConnectionQueue.h"
 #include "AutoLock.h"
 
-InConnection replicationConnection;
-InConnection inConnection;
+std::unique_ptr<InConnection> replicationConnection;
+std::unique_ptr<InConnection> inConnection;
+std::unique_ptr<ThreadPool> agents;
+std::unique_ptr<ThreadPool> replicationAgents;
+
+static auto initialized {false};
+
+void signal_handler(int);
 
 /**
  *Forward the given peer definition to the configuration.
  */
-void add_peer(std::string peer)
+static void add_peer(std::string peer)
 {
     Config::singleton().add_peer(peer);
 }
@@ -24,7 +34,8 @@ void add_peer(std::string peer)
 /**
  *Print the program's how-to-use to stdout.
  */
-void print_usage() {
+static void print_usage()
+{
     std::cout << "bbserv - Bulletin Board Server" << std::endl;
     std::cout << std::endl;
     std::cout << "Usage: bbserv [arguments] [peer..]" << std::endl;
@@ -40,6 +51,104 @@ void print_usage() {
     std::cout << "  -f (with no argument) forces daemon behavior to false." << std::endl;
     std::cout << "  -d (with no argument) forces debugging facilities to true." << std::endl;
     std::cout << "  -q (with no argument) disables debug-prolonged I/O." << std::endl;
+}
+
+/**
+ *Setup some service housekeeping.
+ */
+static void configure()
+{
+    umask(022);
+    signal(SIGQUIT, signal_handler);
+    signal(SIGHUP, signal_handler);
+
+    if (Config::singleton().is_daemon())
+    {
+        // Enter a new session and get rid of the controlling terminal
+        auto pid {fork()};
+        if (0 == pid)
+        {
+            setsid();
+        }
+        else
+        {
+            _exit(0);
+        }
+
+        // Redirect stdout
+        freopen("bbserv.log", "a", stdout);
+    }
+
+    // Publish my PID
+    std::ofstream fout ("bbserv.pid");
+    fout << getpid();
+
+    // Startup of threadpool operating on 's-port'
+    auto replicationQueue = std::make_shared<ConnectionQueue>();
+    replicationAgents = std::make_unique<ThreadPool>(1);
+    replicationAgents->operate(replicationQueue);
+    replicationConnection = std::make_unique<InConnection>();
+    replicationConnection->operate(Config::singleton().get_sport(),
+            replicationQueue, true);
+
+    // Startup of threadpool operating on 'b-port'
+    auto connectionQueue = std::make_shared<ConnectionQueue>();
+    agents = std::make_unique<ThreadPool >(Config::singleton().get_Tmax());
+    agents->operate(connectionQueue);
+    inConnection = std::make_unique<InConnection>();
+    inConnection->operate(Config::singleton().get_bport(), connectionQueue,
+            true);
+
+    initialized = true;
+}
+
+/**
+ *Reset the server infrastruture.
+ */
+static void reinit()
+{
+    initialized = false;
+
+    replicationAgents->stop();
+    replicationConnection->stop();
+    agents->stop();
+    inConnection->stop();
+
+    replicationAgents.reset();
+    agents.reset();
+    replicationConnection.reset();
+    inConnection.reset();
+
+    Config::singleton().clear_peers();
+
+    usleep(Config::singleton().get_network_timeout_ms() * 1000 * 1);
+}
+
+/**
+ *Let the process exit upon catching SIGINT or SIGQUIT.
+ */
+void signal_handler(int sig)
+{
+    switch (sig)
+    {
+        case SIGQUIT:
+            debug_print(sig, "Exit by SIGQUIT");
+            reinit();
+            exit(0);
+            break;
+        case SIGHUP:
+            debug_print(sig, "Reconfigure by SIGHUP");
+            if (!initialized)
+            {
+                std::cout << "Skip reconfiguration" << std::endl;
+                break;
+            }
+            reinit();
+            configure();
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -112,20 +221,8 @@ int main(int argc, char *argv[])
             add_peer(argv[optind]);
         }
 
-        // Startup of threadpool operating on 's-port'
-        auto replicationQueue = std::make_shared<ConnectionQueue>();
-        ThreadPool replicationAgents(1);
-        replicationAgents.operate(replicationQueue);
-        replicationConnection.operate(Config::singleton().get_sport(),
-                replicationQueue, true);
-
-        // Startup of threadpool operating on 'b-port'
-        auto connectionQueue = std::make_shared<ConnectionQueue>();
-        ThreadPool agents(Config::singleton().get_Tmax());
-        agents.operate(connectionQueue);
-        inConnection.operate(Config::singleton().get_bport(), connectionQueue,
-                false);
-
+        // Configure server
+        configure();
     }
     catch (const BBServException& error)
     {
@@ -134,6 +231,7 @@ int main(int argc, char *argv[])
 
     std::cout << "Press ENTER to quit" << std::endl;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    reinit();
 
     return 0;
 }
