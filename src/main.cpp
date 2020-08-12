@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <limits>
 #include "Config.h"
 #include "InConnection.h"
 #include "ThreadPool.h"
