@@ -73,6 +73,12 @@ class SocketResource
     public:
         int get_accept_socket()
         {
+            auto p {reinterpret_cast<void*>(this)};
+
+            if (!p)
+            {
+                return -1;
+            }
             return this->acceptSocket;
         }
 
@@ -83,10 +89,14 @@ class SocketResource
  */
 class InConnection
 {
+    private:
+        static constexpr auto StopId { 0xFFFE };
+
     protected:
         std::unique_ptr<SocketResource> resources;
         std::shared_ptr<ConnectionQueue> connectionQueue;
         bool isNonblocking {false};
+        bool run {true};
 
     public:
         /**
@@ -103,6 +113,11 @@ class InConnection
          */
         void operate(/*const std::string_view& ipaddress,*/ in_port_t port,
                 std::shared_ptr<ConnectionQueue>& qu, bool isNonblocking = false);
+
+        /**
+         *Let the inherent thread stop gracefully.
+         */
+        void stop();
 
     protected:
         void open_incoming_conn(/*const std::string_view& ipaddress,*/ in_port_t port);

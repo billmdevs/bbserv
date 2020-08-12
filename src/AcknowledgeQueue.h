@@ -13,6 +13,8 @@
 class AcknowledgeQueue
 {
     public:
+        static constexpr size_t StopPoolId {-1ul};
+    public:
         /**
          *Access the singleton catalog to get/set/erase the AcknowledgeQueue instance.
          */

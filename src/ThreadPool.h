@@ -36,6 +36,7 @@ class ThreadPool
         size_t size {1};
         std::vector<pthread_t> pool;
         std::shared_ptr<ConnectionQueue> connectionQueue;
+        bool run {true};
 
     public:
         /**
@@ -63,5 +64,15 @@ class ThreadPool
          *Get the ConnectionQueue instance this thread pool is operating on.
          */
         ConnectionQueue* get_connection_queue() noexcept;
+
+        /**
+         *Let the thread-routine return.
+         */
+        void stop();
+
+        /**
+         *Check if this thread shall keep running.
+         */
+        bool running() { return this->run; }
 
 };

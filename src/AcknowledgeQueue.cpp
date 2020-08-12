@@ -39,7 +39,7 @@ void AcknowledgeQueue::add(bool success) noexcept
 
     guard.unlock();
     pthread_cond_signal(&queueCondition);
-    debug_print(this, "Acknowledge signalled ", success);
+    //debug_print(this, "Acknowledge signalled ", success);
 }
 
 bool AcknowledgeQueue::check_success(size_t replyCount) noexcept
