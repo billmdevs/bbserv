@@ -21,6 +21,7 @@
 #include "CmdUnsuccessful.h"
 #include "BroadcastPrecommit.h"
 #include "BroadcastCommit.h"
+#include "BroadcastUnsuccessful.h"
 
 /**
  *A container of agents operating on client requests.
@@ -30,7 +31,7 @@ class ThreadPool
     public:
         using Commands_t = std::variant<CmdUser, CmdWrite, CmdRead, CmdReplace, CmdQuit,
               CmdPrecommit, CmdCommit, CmdAcknowledge, CmdSuccessful, CmdUnsuccessful,
-              BroadcastPrecommit, BroadcastCommit>;
+              BroadcastPrecommit, BroadcastCommit, BroadcastUnsuccessful>;
 
     protected:
         size_t size {1};

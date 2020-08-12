@@ -14,6 +14,8 @@
 #include "CmdCommit.h"
 #include "CmdAcknowledge.h"
 #include "BroadcastPrecommit.h"
+#include "BroadcastCommit.h"
+#include "BroadcastUnsuccessful.h"
 
 
 /**
@@ -84,6 +86,10 @@ std::optional<ThreadPool::Commands_t> build_command(const std::string commandId,
     else if (commandId == "BROADCAST-COMMIT")
     {
         return BroadcastCommit("COMMIT", resources.get_stream(), line);
+    }
+    else if (commandId == "BROADCAST-UNSUCCESSFUL")
+    {
+        return BroadcastUnsuccessful("UNSUCCESSFUL", resources.get_stream(), line);
     }
     return {};
 }
