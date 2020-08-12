@@ -3,8 +3,7 @@
 ## Bulletin Board Messages and Distributed Agreement:
 ## A CSC 590 Challenge
 
-Bill Morrisson
-bill.morrison@somedomain.com
+Part of the requirements for the M.Sc. capstone research project(CS590)
 
 Bulletin Board Server
 ---------------------
@@ -73,3 +72,6 @@ threads is able to process these polymorphic data structures in a concurrent and
 transparent manner. In order to do so, raw data, e.g. coming from an incoming
 network connection, is passed to a builder function, which encapsulates the
 knowledge of how to create Command Objects.
+
+After implementing and testing the undo feature. I realized it is a bit tricky because you need to provoke some exceptional situation at the point when PRECOMMIT has already been acknowledged. E.g. by deleting lines from the bbfile, which would let REPLACE fail or kill a bbserv instance before it replies SUCCESS to COMMIT, which you can do manually if you started it with '-d'.
+I figured I should mention that.
