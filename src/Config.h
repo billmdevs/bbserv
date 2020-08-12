@@ -124,6 +124,10 @@ class Config
          */
         void add_peer(std::string& peer);
         /**
+         *Clear the peers-collection.
+         */
+        void clear_peers();
+        /**
          *Get the default timeout in ms for non-blocking network operations.
          */
         int get_network_timeout_ms()                { return 5000; }

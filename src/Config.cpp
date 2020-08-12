@@ -44,6 +44,11 @@ void Config::add_peer(std::string& peer)
     debug_print(this, "Added a peer: ", this->peers[this->peers.size() - 1]);
 }
 
+void Config::clear_peers()
+{
+    this->peers.clear();
+}
+
 size_t Config::read_config_uint(std::string& value)
 {
     std::istringstream sin (value);
