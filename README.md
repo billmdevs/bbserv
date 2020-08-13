@@ -35,7 +35,7 @@ This project is written in C++17 and provides a build script based non GNU Make.
 It relies only on standard POSIX libraries and is developed and tested on
 GNU/Linux with GCC9. So it might be working on other POSIX compliant platforms
 as well.
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ### Design Principles
 ~~~~~~~~~~~~~~~~~
 
