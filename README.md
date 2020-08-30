@@ -73,5 +73,8 @@ transparent manner. In order to do so, raw data, e.g. coming from an incoming
 network connection, is passed to a builder function, which encapsulates the
 knowledge of how to create Command Objects.
 
-After implementing and testing the undo feature. I realized it is a bit tricky because you need to provoke some exceptional situation at the point when PRECOMMIT has already been acknowledged. E.g. by deleting lines from the bbfile, which would let REPLACE fail or kill a bbserv instance before it replies SUCCESS to COMMIT, which you can do manually if you started it with '-d'.
+After implementing and testing the undo feature. I realized it is a bit tricky 
+because you need to provoke some exceptional situation at the point when PRECOMMIT 
+has already been acknowledged. E.g. by deleting lines from the bbfile, which would 
+let REPLACE fail or kill a bbserv instance before it replies SUCCESS to COMMIT, which you can do manually if you started it with '-d'.
 I figured I should mention that.
