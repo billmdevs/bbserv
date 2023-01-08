@@ -3,7 +3,7 @@
 ## Bulletin Board Messages and Distributed Agreement:
 ## A CSC 590 Challenge
 
-Part of the requirements for the M.Sc. capstone research project(CS590)
+Part of the requirements for the M.Sc. capstone research project
 
 Bulletin Board Server
 ---------------------
